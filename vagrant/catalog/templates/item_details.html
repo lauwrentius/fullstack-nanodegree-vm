@@ -1,0 +1,25 @@
+{% extends "layout.html" %}
+{% block title %}
+  {{item.name}}
+{% endblock %}
+
+{% block content %}
+  <div class="panel-item panel-body">
+    <h3 class="text-info">{{item.name}}
+      <span class="small-link">
+        (<a href="{{url_for('displaySingleCatItems', cat_id = item.category_id)}}">{{item.category.name}}</a>)
+      </span>
+    </h3>
+    <p>{{item.description}}</p>
+  </div>
+  <div class="panel-footer text-right">
+    <a class="btn btn-success btn-sm"
+      href="{{url_for('editItem', item_id = item.id )}}">
+      <span class="glyphicon glyphicon-pencil"></span> Edit
+    </a>
+    <a class="btn btn-danger btn-sm">
+      <span class="glyphicon glyphicon-trash"></span> Delete
+
+    </a>
+  </div>
+{% endblock %}

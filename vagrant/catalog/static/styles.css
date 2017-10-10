@@ -1,0 +1,41 @@
+body{
+    background-color: #eee;
+}
+.header-bar{
+  margin-bottom: 20px;
+  padding-bottom: 10px;
+}
+.header-bar a,.header-bar a:hover{
+  color: white;
+  text-decoration: none;
+}
+.panel-body.display-items{
+  padding: 0;
+}
+.cat-cols, .content-cols{
+  float: none;
+  display: table-cell;
+  padding: 0px 15px 15px 15px;
+  font-size: 14px;
+  line-height: 20px;
+}
+.panel-item{
+  padding: 0px 15px 15px 15px;
+}
+.cat-cols{
+  border-right: 1px solid #ddd;
+}
+
+.cat-text:hover,
+a.curr-cat{
+  font-weight: bold;
+  text-decoration: underline;
+}
+
+.small-link{
+  font-size: 16px;
+}
+
+form.edit-item{
+  margin: 0;
+}

@@ -29,17 +29,48 @@ def displayItems():
     cats = session.query(Category).all()
     items = session.query(CategoryItem).order_by(CategoryItem.id).all()
     title_text = "Latest Items"
-    return render_template(
-        'display_items.html', cats=cats, items=items, title_text=title_text)
 
-@app.route('/catalog/<string:cat_name>/items')
-def displaySingleCatItems(cat_name):
+    return render_template(
+        'display_items.html', cats=cats, items=items,
+        title_text=title_text, cat_name = "")
+
+@app.route('/catalog/<int:cat_id>/')
+def displaySingleCatItems(cat_id):
     cats = session.query(Category).all()
-    items = session.query(CategoryItem).join(CategoryItem.category).filter(Category.name==cat_name).all()
-    title_text = "%s Items (%i items)" % (cat_name, len(items)+1)
+    curr_cat = session.query(Category).filter(Category.id==cat_id).one()
+    items = session.query(CategoryItem) \
+        .filter(CategoryItem.category_id==cat_id).all()
+
+    title_text = "%s Items (%i items)" % (curr_cat.name, len(items))
 
     return render_template(
-        'display_items.html', cats=cats, items=items, title_text=title_text)
+        'display_items.html', cats=cats, items=items,
+        title_text=title_text, cat_name = curr_cat.name)
+
+@app.route('/item/<int:item_id>')
+def displayItemDetails(item_id):
+    item = session.query(CategoryItem).join(CategoryItem.category) \
+        .filter(CategoryItem.id==item_id).one()
+    return render_template('item_details.html', item=item)
+
+@app.route('/item/<int:item_id>/edit', \
+    methods=['GET', 'POST'])
+def editItem(item_id):
+    cats = session.query(Category).all()
+    item = session.query(CategoryItem).join(CategoryItem.category) \
+        .filter(CategoryItem.id==item_id).one()
+
+    if request.method == 'POST':
+        item.name = request.form['name']
+        item.description = request.form['description']
+        item.category_id = request.form['category']
+
+        session.add(item)
+        session.commit()
+
+        return redirect(url_for('displayItemDetails', item_id= item.id))
+    else:
+        return render_template('item_edit.html', cats=cats, item=item)
 
 # @app.route('/restaurants/<int:restaurant_id>/new', methods=['GET', 'POST'])
 # def newMenuItem(restaurant_id):
