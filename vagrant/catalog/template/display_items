@@ -1,0 +1,24 @@
+<html>
+
+<body>
+
+
+{% for cat in cats %}
+<h1>{{cat.name}}</h1>
+{% endfor %}
+
+<hr />
+
+{% for item in items %}
+<p>
+  {{item.name}}<br />
+  {{item.description}}<br />
+  {{item.category.name}}
+</p>
+{% endfor %}
+
+
+
+</body>
+
+</html>

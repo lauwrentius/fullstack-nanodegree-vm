@@ -1,0 +1,30 @@
+<html>
+
+<body>
+
+
+{% for cat in cats %}
+<h1>{{cat.name}}</h1>
+{% endfor %}
+
+<hr />
+
+{% for item in items %}
+<p>
+  {{i.name}}<br />
+  {{i.description}}<br />
+  {{i.category.name}}
+</p>
+{% endfor %}
+
+<!-- <a href='{{url_for('editMenuItem', restaurant_id = restaurant.id, menu_id = i.id) }}'>Edit</a>
+
+</br>
+<a href = '{{url_for('deleteMenuItem', restaurant_id = restaurant.id, menu_id = i.id ) }}'>Delete</a>
+
+</div> -->
+
+
+</body>
+
+</html>
