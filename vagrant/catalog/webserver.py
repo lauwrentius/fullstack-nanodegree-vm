@@ -72,8 +72,7 @@ def editItem(item_id):
     else:
         return render_template('item_edit.html', cats=cats, item=item)
 
-@app.route('/item/add', \
-    methods=['GET', 'POST'])
+@app.route('/item/add', methods=['GET', 'POST'])
 def addItem():
     cats = session.query(Category).all()
     new_item = CategoryItem(name="", description="", category_id=-1)
@@ -85,12 +84,21 @@ def addItem():
 
         session.add(new_item)
         session.commit()
-        # session.refresh(new_item)
 
-        return 'xxx'#new_item#redirect(url_for('displayItemDetails', item_id= new_item.id))
+        return redirect(url_for('displayItemDetails', item_id= new_item.id))
     else:
         return render_template('item_edit.html', cats=cats, item=None)
 
+@app.route('/item/<int:item_id>/delete', \
+    methods=['POST'])
+def deleteItem(item_id):
+    item = session.query(CategoryItem).join(CategoryItem.category) \
+        .filter(CategoryItem.id==item_id).one()
+
+    session.delete(item)
+    session.commit()
+
+    return redirect(url_for('displayItems'))
 # @app.route('/restaurants/<int:restaurant_id>/new', methods=['GET', 'POST'])
 # def newMenuItem(restaurant_id):
 #

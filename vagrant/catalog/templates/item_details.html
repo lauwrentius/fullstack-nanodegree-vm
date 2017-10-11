@@ -17,9 +17,10 @@
       href="{{url_for('editItem', item_id = item.id )}}">
       <span class="glyphicon glyphicon-pencil"></span> Edit
     </a>
-    <a class="btn btn-danger btn-sm">
-      <span class="glyphicon glyphicon-trash"></span> Delete
-
-    </a>
+    <form class="display-inline" action="{{url_for('deleteItem', item_id = item.id)}}">
+      <button type="submit" class="btn btn-danger btn-sm">
+        <span class="glyphicon glyphicon-trash"></span> Delete
+      </button>
+    </form>
   </div>
 {% endblock %}
