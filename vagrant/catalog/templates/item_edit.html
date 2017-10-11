@@ -4,7 +4,14 @@
 {% endblock %}
 
 {% block content %}
-  <form class="edit-item" action="{{url_for('editItem', item_id = item.id )}}" method = 'POST'>
+  <form class="edit-item"
+    action="
+    {% if item != None %}
+      {{url_for('editItem', item_id = item.id)}}
+    {% else %}
+      {{url_for('addItem')}}
+    {% endif %}"
+    method = "POST">
 
   <div class="panel-item panel-body">
     <h3 class="text-info">Edit Item</h3>
@@ -38,7 +45,12 @@
       <span class="glyphicon glyphicon-ok"></span> Submit
     </button>
     <a class="btn btn-danger btn-sm"
-      href="{{url_for('displayItemDetails', item_id = item.id )}}">
+      href="
+      {% if item != None %}
+        {{url_for('displayItemDetails', item_id = item.id)}}
+      {% else %}
+        {{url_for('displayItems')}}
+      {% endif %}">
       <span class="glyphicon glyphicon-remove"></span> Cancel
     </a>
   </div>

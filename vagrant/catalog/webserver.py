@@ -72,6 +72,25 @@ def editItem(item_id):
     else:
         return render_template('item_edit.html', cats=cats, item=item)
 
+@app.route('/item/add', \
+    methods=['GET', 'POST'])
+def addItem():
+    cats = session.query(Category).all()
+    new_item = CategoryItem(name="", description="", category_id=-1)
+
+    if request.method == 'POST':
+        new_item.name = request.form['name']
+        new_item.description = request.form['description']
+        new_item.category_id = request.form['category']
+
+        session.add(new_item)
+        session.commit()
+        # session.refresh(new_item)
+
+        return 'xxx'#new_item#redirect(url_for('displayItemDetails', item_id= new_item.id))
+    else:
+        return render_template('item_edit.html', cats=cats, item=None)
+
 # @app.route('/restaurants/<int:restaurant_id>/new', methods=['GET', 'POST'])
 # def newMenuItem(restaurant_id):
 #
