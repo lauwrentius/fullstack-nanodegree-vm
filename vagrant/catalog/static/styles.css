@@ -39,3 +39,6 @@ a.curr-cat{
 form.edit-item{
   margin: 0;
 }
+form.form-delete{
+  display: inline;
+}
