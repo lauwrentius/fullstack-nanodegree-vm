@@ -46,7 +46,7 @@ def showLogin():
 
     test = pprint.pformat(login_session)
 
-    return render_template('login.html', STATE=state, test=test)
+    return render_template('login.html.j2', STATE=state, test=test)
 
 
 @app.route('/gconnect', methods=['POST'])
@@ -132,16 +132,46 @@ def gconnect():
     print "done!"
     return output
 
+@app.route('/gdisconnect')
+def gdisconnect():
+    access_token = login_session.get('access_token')
+    if access_token is None:
+        print 'Access Token is None'
+        response = make_response(json.dumps('Current user not connected.'), 401)
+        response.headers['Content-Type'] = 'application/json'
+        return response
+    print 'In gdisconnect access token is %s', access_token
+    print 'User name is: '
+    print login_session['username']
+    url = 'https://accounts.google.com/o/oauth2/revoke?token=%s' % login_session['access_token']
+    h = httplib2.Http()
+    result = h.request(url, 'GET')[0]
+    print 'result is '
+    print result
+    if result['status'] == '200':
+        del login_session['access_token']
+        del login_session['gplus_id']
+        del login_session['username']
+        del login_session['email']
+        del login_session['picture']
+        response = make_response(json.dumps('Successfully disconnected.'), 200)
+        response.headers['Content-Type'] = 'application/json'
+        return response
+    else:
+        response = make_response(json.dumps('Failed to revoke token for given user.', 400))
+        response.headers['Content-Type'] = 'application/json'
 
 @app.route('/')
 def displayItems():
+    test = pprint.pformat(login_session)
+
     cats = session.query(Category).all()
     items = session.query(CategoryItem).order_by(CategoryItem.id).all()
     title_text = "Latest Items"
 
     return render_template(
-        'display_items.html', cats=cats, items=items,
-        title_text=title_text, cat_name = "")
+        'display_items.html.j2', cats=cats, items=items,
+        title_text=title_text, cat_name = "", login_session=login_session, test=test)
 
 @app.route('/catalog/<int:cat_id>/')
 def displaySingleCatItems(cat_id):
@@ -153,14 +183,14 @@ def displaySingleCatItems(cat_id):
     title_text = "%s Items (%i items)" % (curr_cat.name, len(items))
 
     return render_template(
-        'display_items.html', cats=cats, items=items,
+        'display_items.html.j2', cats=cats, items=items,
         title_text=title_text, cat_name = curr_cat.name)
 
 @app.route('/item/<int:item_id>')
 def displayItemDetails(item_id):
     item = session.query(CategoryItem).join(CategoryItem.category) \
         .filter(CategoryItem.id==item_id).one()
-    return render_template('item_details.html', item=item)
+    return render_template('item_details.html.j2', item=item)
 
 @app.route('/item/<int:item_id>/edit', \
     methods=['GET', 'POST'])
@@ -179,7 +209,7 @@ def editItem(item_id):
 
         return redirect(url_for('displayItemDetails', item_id= item.id))
     else:
-        return render_template('item_edit.html', cats=cats, item=item)
+        return render_template('item_edit.html.j2', cats=cats, item=item)
 
 @app.route('/item/add', methods=['GET', 'POST'])
 def addItem():
@@ -196,10 +226,10 @@ def addItem():
 
         return redirect(url_for('displayItemDetails', item_id= new_item.id))
     else:
-        return render_template('item_edit.html', cats=cats, item=None)
+        return render_template('item_edit.html.j2', cats=cats, item=None)
 
 @app.route('/item/<int:item_id>/delete', \
-    methods=['GET', 'POST'])
+    methods=['POST'])
 def deleteItem(item_id):
     item = session.query(CategoryItem).join(CategoryItem.category) \
         .filter(CategoryItem.id==item_id).one()

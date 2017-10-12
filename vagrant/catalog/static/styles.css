@@ -5,10 +5,19 @@ body{
   margin-bottom: 20px;
   padding-bottom: 10px;
 }
-.header-bar a,.header-bar a:hover{
+.header-bar h1 a,.header-bar h1 a:hover{
   color: white;
   text-decoration: none;
 }
+.header-bar .login-session-col{
+  padding: 20px 15px 0px 15px;
+}
+.header-bar .login-session-col a{
+  color: white;
+  text-decoration: underline;
+}
+
+
 .panel-body.display-items{
   padding: 0;
 }

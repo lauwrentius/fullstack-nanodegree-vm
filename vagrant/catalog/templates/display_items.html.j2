@@ -1,4 +1,4 @@
-{% extends "layout.html" %}
+{% extends "layout.html.j2" %}
 {% block title %}
   {% if cat_name == '' %}
     Home
@@ -33,4 +33,9 @@
     <a href="{{url_for('addItem' )}}" class="btn btn-success btn-sm" type="submit">
       <span class="glyphicon glyphicon-plus"></span> Add Item
     </a>
+  </div>
+{% endblock %}
+
+{% block footer %}
+  {{test}}
 {% endblock %}
