@@ -15,11 +15,13 @@
 
 
 <body>
+  {% for key in login_session %}
+    {{key}}=>{{login_session[key]}}<br />
+  {% endfor %}
+  <hr />
+  {{STATE}}<br />
   <!--FACEBOOK SIGN IN -->
-  {{test}}
-  <hr />
-  {{state}}
-  <hr />
+
   <script>
     window.fbAsyncInit = function() {
     FB.init({

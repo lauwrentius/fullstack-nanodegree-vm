@@ -27,8 +27,6 @@ Base.metadata.bind = engine
 DBSession = sessionmaker(bind=engine)
 session = DBSession()
 
-
-
 # @app.route('/restaurants/<int:restaurant_id>/menu/JSON')
 # def restaurantMenuJSON(restaurant_id):
 #     restaurant = session.query(Restaurant).filter_by(id=restaurant_id).one()
@@ -45,10 +43,7 @@ def showLogin():
     state = ''.join(random.choice(string.ascii_uppercase + string.digits)
                     for x in xrange(32))
     login_session['state'] = state
-
-    test = pprint.pformat(login_session)
-
-    return render_template('login.html.j2', state=state, test=login_session)
+    return render_template('login.html.j2', STATE=login_session['state'], login_session=login_session)
 
 @app.route('/fbconnect', methods=['POST'])
 def fbconnect():
@@ -104,10 +99,9 @@ def fbconnect():
     login_session['picture'] = data["data"]["url"]
 
     # see if user exists
-    user_id = getUserID(login_session['email'])
-    if not user_id:
-        user_id = createUser(login_session)
-    login_session['user_id'] = user_id
+    # user_id = getUserID(login_session['email'])
+    # if not user_id:
+    #     user_id = createUser(login_session)
 
     output = ''
     output += '<h1>Welcome, '
