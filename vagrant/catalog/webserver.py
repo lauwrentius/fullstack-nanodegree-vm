@@ -45,6 +45,33 @@ def showLogin():
     login_session['state'] = state
     return render_template('login.html.j2', STATE=login_session['state'], login_session=login_session)
 
+@app.route('/ghcallback')
+def ghCallback():
+    ret = '<script>'\
+        'var code = window.location.toString().replace(/.+code=/, \'\');' \
+        'console.log(code, parent);' \
+        'window.opener.githubCallback(code);' \
+        'window.close();' \
+        '</script>'
+
+    return ret
+
+@app.route('/ghconnect', methods=['POST'])
+def ghconnect():
+    if request.args.get('state') != login_session['state']:
+        response = make_response(json.dumps('Invalid state parameter.'), 401)
+        response.headers['Content-Type'] = 'application/json'
+        return response
+
+    access_token = "TOKEN"+request.data
+
+    result = 'asdasd'
+    url = 'https://github.com/login/oauth/access_token?client_id=e6789cd05a49a53a00b6&client_secret=3d9f803979f5964e840d9c6cc6015b9f07eb4b8c&code=%s&state=%s' % (request.data, login_session['state'])
+    h = httplib2.Http()
+    resp = h.request(url, 'POST')
+
+    return url
+
 @app.route('/fbconnect', methods=['POST'])
 def fbconnect():
     if request.args.get('state') != login_session['state']:

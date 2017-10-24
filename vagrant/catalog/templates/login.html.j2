@@ -136,8 +136,59 @@
 
 
 
-<!--END GOOGLE PLUS SIGN IN BUTTON -->
 
+<!--END GOOGLE PLUS SIGN IN BUTTON -->
+<!-- <a href="https://github.com/login/oauth/authorize?scope=user:email&client_id=e6789cd05a49a53a00b6">Click here</a> to begin!</a> -->
+<button id="ghLogin">Github Login</button>
+<!-- Personal Access Token -->
+<!-- d84837ca5be55cfba1e8f11310556613c4105bb1 -->
+
+<script>
+function githubCallback(code){
+    console.log(code);
+    $.ajax({
+      type: 'POST',
+      url: '/ghconnect?state={{STATE}}',
+      processData: false,
+      data: code,
+      contentType: 'application/octet-stream; charset=utf-8',
+      success: function(result) {
+        console.log(result);
+    }});
+}
+
+$('#ghLogin').click(function () {
+  w = 750;
+  h = 700;
+  l = (window.screen.width / 2) - ((w / 2));
+  t = (window.screen.height / 2) - ((h / 2) + 50);
+
+  console.log(window.innerWidth,window.innerHeight,window.screenX,window.screenY,l,t )
+  var strWindowFeatures = "menubar=no,location=no,resizable=no,scrollbars=no,status=yes,width="+w+",height="+h+",left="+l+",top="+t;
+
+	window.open('https://github.com' +
+		'/login/oauth/authorize' +
+		'?client_id=e6789cd05a49a53a00b6' +
+		'&scope=user',"GithubLogin", strWindowFeatures);
+
+/*  $(window).on("message",function(evt){
+    console.log(evt);
+  })*/
+});
+
+  // $("#github").click(function(){
+  //   $.ajax({
+  //     type: 'POST',
+  //     url: 'https://github.com/login/oauth/authorize',
+  //     processData: false,
+  //     data: { client_id: ''},
+  //     contentType: 'application/octet-stream; charset=utf-8',
+  //     success: function(result) {
+  //       console.log(result)
+  //     });
+  //   });
+  // })
+</script>
   </body>
 
   </html>
