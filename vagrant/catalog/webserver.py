@@ -4,7 +4,8 @@ from sqlalchemy.orm import sessionmaker
 from database_setup import Base, Category, CategoryItem
 
 from flask import session as login_session
-import random
+
+import random , urllib
 import string
 
 from oauth2client.client import flow_from_clientsecrets, FlowExchangeError
@@ -17,8 +18,7 @@ import pprint
 
 app = Flask(__name__)
 
-CLIENT_ID = json.loads(
-    open('client_secrets.json', 'r').read())['web']['client_id']
+
 # APPLICATION_NAME = "Restaurant Menu Application"
 
 engine = create_engine('sqlite:///categoryitem.db')
@@ -49,11 +49,21 @@ def showLogin():
 def ghCallback():
     ret = '<script>'\
         'var code = window.location.toString().replace(/.+code=/, \'\');' \
-        'console.log(code, parent);' \
         'window.opener.githubCallback(code);' \
         'window.close();' \
         '</script>'
 
+    return ret
+
+@app.route('/azcallback')
+def azCallback():
+    ret = '<script>'\
+        'code =  window.location.toString();' \
+        'console.log(code, parent);' \
+        'window.opener.azCallback(code);' \
+        '</script>'
+        # 'window.close();' \
+        #'var code = window.location.toString().replace(/.+code=/, \'\');' \
     return ret
 
 @app.route('/ghconnect', methods=['POST'])
@@ -63,14 +73,36 @@ def ghconnect():
         response.headers['Content-Type'] = 'application/json'
         return response
 
-    access_token = "TOKEN"+request.data
-
-    result = 'asdasd'
-    url = 'https://github.com/login/oauth/access_token?client_id=e6789cd05a49a53a00b6&client_secret=3d9f803979f5964e840d9c6cc6015b9f07eb4b8c&code=%s&state=%s' % (request.data, login_session['state'])
     h = httplib2.Http()
-    resp = h.request(url, 'POST')
+    client_id = json.loads(open('gh_client_secrets.json', 'r').read())['client_id']
+    client_secret = json.loads(open('gh_client_secrets.json', 'r').read())['client_secret']
 
-    return url
+    #  url = ('https://github.com/login/oauth/access_token?client_id=e6789cd05a49a53a00b6&client_secret=3d9f803979f5964e840d9c6cc6015b9f07eb4b8c&code=%s&state=%s'%(request.data, login_session['state']))
+    url = 'https://github.com/login/oauth/access_token'
+    headers = {'Accept':'application/json'}
+    body = urllib.urlencode({ 'client_id': client_id, 'client_secret': client_secret, 'code': request.data, 'state':login_session['state']})
+
+
+    resp, content = h.request(url, 'POST', body=body, headers=headers)
+
+    #check for error??
+    #200{"error":"bad_verification_code","error_description":"The code passed is incorrect or expired.","error_uri":"https://developer.github.com/v3/oauth/#bad-verification-code"}
+
+    login_session['access_token'] = json.loads(content)['access_token']
+
+    url = ('https://api.github.com/user?access_token=%s' % login_session['access_token'])
+
+    #check for error??
+    #401{"message":"Bad credentials","documentation_url":"https://developer.github.com/v3"}
+
+    resp, content = h.request(url, 'GET')
+    user_data = json.loads(content)
+
+    login_session['username'] = user_data['login']
+    login_session['picture'] = user_data['avatar_url']
+    login_session['email'] = user_data['email']
+
+    return login_session['access_token'] +'\n'+ str(resp.status) +'\n'+ content
 
 @app.route('/fbconnect', methods=['POST'])
 def fbconnect():
@@ -152,6 +184,14 @@ def fbdisconnect():
     result = h.request(url, 'DELETE')[1]
     return "you have been logged out"
 
+@app.route('/testing')
+def testing():
+    result = {"data":"testing","error":"DATA ERROR"}
+
+    response = make_response(json.dumps(result.get('error')), 500)
+    response.headers['Content-Type'] = 'application/json'
+    return response
+
 @app.route('/gconnect', methods=['POST'])
 def gconnect():
     # Validate state token
@@ -159,12 +199,17 @@ def gconnect():
         response = make_response(json.dumps('Invalid state parameter.'), 401)
         response.headers['Content-Type'] = 'application/json'
         return response
+
     # Obtain authorization code
+
+    CLIENT_ID = json.loads(
+        open('./client_secrets/google.json', 'r').read())['web']['client_id']
+
     code = request.data
 
     try:
         # Upgrade the authorization code into a credentials object
-        oauth_flow = flow_from_clientsecrets('client_secrets.json', scope='')
+        oauth_flow = flow_from_clientsecrets('./client_secrets/google.json', scope='')
         oauth_flow.redirect_uri = 'postmessage'
         credentials = oauth_flow.step2_exchange(code)
     except FlowExchangeError:

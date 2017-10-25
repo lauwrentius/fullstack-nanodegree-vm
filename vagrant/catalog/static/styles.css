@@ -1,6 +1,9 @@
 body{
     background-color: #eee;
 }
+.h1, .h2, .h3, .h4, .h5, .h6, h1, h2, h3, h4, h5, h6 {
+    font-weight: 100;
+}
 .header-bar{
   margin-bottom: 20px;
   padding-bottom: 10px;
@@ -50,4 +53,15 @@ form.edit-item{
 }
 form.form-delete{
   display: inline;
+}
+
+.icon {
+  display: inline-block;
+  vertical-align: middle;
+  width: 1.1em;
+  height: 1.1em;
+  stroke-width: 0;
+  stroke: #fff;
+  fill: #fff;
+  margin: 0px 5px 3px 0px;
 }

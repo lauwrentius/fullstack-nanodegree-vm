@@ -1,25 +1,84 @@
 <!DOCTYPE html>
 <html>
 <head>
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css" integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp" crossorigin="anonymous">
+  <link rel=stylesheet type=text/css href="{{ url_for('static', filename='styles.css') }}">
+
+  <title>{% block title %}{% endblock %}- Catalog App</title>
 
   <!--LOAD PRE-REQUISITES FOR GOOGLE SIGN IN -->
-   <script src="//ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js">
-  </script>
-
-<script src="//apis.google.com/js/platform.js?onload=start"> </script>
-
-<!-- END PRE-REQUISITES FOR GOOGLE SIGN IN -->
-
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js"></script>
+  <script src="//apis.google.com/js/platform.js?onload=start"></script>
 
 </head>
 
 
 <body>
-  {% for key in login_session %}
-    {{key}}=>{{login_session[key]}}<br />
-  {% endfor %}
-  <hr />
+  {% include 'svg_defs.html.j2' %}
+
+  <div class="header-bar bg-primary">
+    <div class="container">
+      <div class="row">
+        <div class="col-xs-12">
+          <h1><a href="{{url_for('displayItems')}}">Catalog App</a></h1>
+        </div>
+        <!-- <div class="col-xs-8 login-session-col text-right">
+          {% if username in login_session %}
+            Welcome, {{login_session.username}}<br />
+            <a class="text-muted" href="{{url_for('gdisconnect')}}">Logout</a>
+          {% else %}
+            <a href="#">Login</a>
+          {% endif %}
+        </div> -->
+      </div>
+
+      </div>
+    </div>
+  </div>
+
+  <div class="container panel panel-default">
+    <div class="row panel-body">
+      <div class="col-xs-12">
+        <h2>Login</h2>
+        <hr />
+        <button class="btn btn-primary btn-lg btn-login">
+          <span class="g-signin"
+            data-scope="openid email"
+            data-clientid="73238435638-ehebh00qps4cr2unhikf24hudbvplh91.apps.googleusercontent.com"
+            data-redirecturi="postmessage"
+            data-accesstype="offline"
+            data-cookiepolicy="single_host_origin"
+            data-callback="googleCallback"
+            data-approvalprompt="force">
+          <svg class="icon icon-google-plus">
+            <use xlink:href="#icon-google-plus"></use>
+          </svg>
+          Login with Google
+          </span>
+        </button>&nbsp;
+        <button class="btn btn-primary btn-lg btn-login">
+          <svg class="icon icon-facebook">
+            <use xlink:href="#icon-facebook"></use>
+          </svg>
+          Login with Facebook
+        </button>&nbsp;
+        <button class="btn btn-primary btn-lg btn-login">
+          <svg class="icon icon-github">
+            <use xlink:href="#icon-github"></use>
+          </svg>
+          Login with GitHub
+        </button>
+      </div>
+    </div>
+    <div class="row panel-footer">
+      <div class="col-xs-12 text-right">
+        <small class="text-muted">Catalog App Login Page</small>
+      </div>
+    </div>
+  </div>
   {{STATE}}<br />
+
   <!--FACEBOOK SIGN IN -->
 
   <script>
@@ -72,6 +131,7 @@
     }
   </script>
 
+  <button class="btn btn-sm">Facebook</button>
 
   <button>
 
@@ -88,51 +148,43 @@
 <!-- GOOGLE PLUS SIGN IN BUTTON-->
 
 
-          <div id="signinButton">
-          <span class="g-signin"
-            data-scope="openid email"
-            data-clientid="73238435638-ehebh00qps4cr2unhikf24hudbvplh91.apps.googleusercontent.com"
-            data-redirecturi="postmessage"
-            data-accesstype="offline"
-            data-cookiepolicy="single_host_origin"
-            data-callback="signInCallback"
-            data-approvalprompt="force">
-          </span>
+          <!-- <div id="signinButton">
+
         </div>
 
-        <div id="result"></div>
+        <div id="result"></div> -->
 
-        <script>
-        function signInCallback(authResult) {
-          console.log("AUTH GOOGLE",authResult);
-          if (authResult['code']) {
-            // Hide the sign-in button now that the user is authorized
-            $('#signinButton').attr('style', 'display: none');
-            // Send the one-time-use code to the server, if the server responds, write a 'login successful' message to the web page and then redirect back to the main restaurants page
-            $.ajax({
-              type: 'POST',
-              url: '/gconnect?state={{STATE}}',
-              processData: false,
-              data: authResult['code'],
-              contentType: 'application/octet-stream; charset=utf-8',
-              success: function(result) {
-                // Handle or verify the server response if necessary.
-                console.log(result);
-                if (result) {
-                  $('#result').html('Login Successful!</br>'+ result + '</br>Redirecting...')
-                 /*setTimeout(function() {
-                  window.location.href = "/";
-                }, 4000);*/
-
-              } else if (authResult['error']) {
+<script>
+  function googleCallback(authResult) {
+    console.log("AUTH GOOGLE",authResult);
+    if (authResult['code']) {
+      // Hide the sign-in button now that the user is authorized
+      $('#signinButton').attr('style', 'display: none');
+      // Send the one-time-use code to the server, if the server responds, write a 'login successful' message to the web page and then redirect back to the main restaurants page
+      $.ajax({
+        type: 'POST',
+        url: '/gconnect?state={{STATE}}',
+        processData: false,
+        data: authResult['code'],
+        contentType: 'application/octet-stream; charset=utf-8',
+        success: function(result) {
+          // Handle or verify the server response if necessary.
+          console.log(result);
+          if (result) {
+            $('#result').html('Login Successful!</br>'+ result + '</br>Redirecting...')
+           /*setTimeout(function() {
+            window.location.href = "/";
+          }, 4000);*/
+          } else if (authResult['error']) {
             console.log('There was an error: ' + authResult['error']);
           } else {
-                $('#result').html('Failed to make a server-side call. Check your configuration and console.');
-                 }
-              }
-
-          }); } }
-        </script>
+            $('#result').html('Failed to make a server-side call. Check your configuration and console.');
+          }
+        }
+      });
+    }
+  }
+</script>
 
 
 
@@ -142,6 +194,7 @@
 <button id="ghLogin">Github Login</button>
 <!-- Personal Access Token -->
 <!-- d84837ca5be55cfba1e8f11310556613c4105bb1 -->
+
 
 <script>
 function githubCallback(code){
@@ -175,19 +228,6 @@ $('#ghLogin').click(function () {
     console.log(evt);
   })*/
 });
-
-  // $("#github").click(function(){
-  //   $.ajax({
-  //     type: 'POST',
-  //     url: 'https://github.com/login/oauth/authorize',
-  //     processData: false,
-  //     data: { client_id: ''},
-  //     contentType: 'application/octet-stream; charset=utf-8',
-  //     success: function(result) {
-  //       console.log(result)
-  //     });
-  //   });
-  // })
 </script>
   </body>
 
