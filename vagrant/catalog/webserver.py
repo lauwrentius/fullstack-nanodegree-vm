@@ -1,23 +1,16 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, make_response
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, make_response, session as login_session
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from database_setup import Base, Category, CategoryItem
-
-from flask import session as login_session
-
-import random , urllib
-import string
-
+from werkzeug.utils import secure_filename
 from oauth2client.client import flow_from_clientsecrets, FlowExchangeError
-import httplib2
-import json
-import requests
+import os, random , urllib, string, httplib2, json, requests, pprint
 
-import pprint
-
+UPLOAD_FOLDER = '/vagrant/catalog/uploads'
+ALLOWED_EXTENSIONS = set(['jpg', 'jpe', 'jpeg', 'png', 'gif', 'svg', 'bmp'])
 
 app = Flask(__name__)
-
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 # APPLICATION_NAME = "Restaurant Menu Application"
 
@@ -27,13 +20,62 @@ Base.metadata.bind = engine
 DBSession = sessionmaker(bind=engine)
 session = DBSession()
 
+def allowed_file(filename):
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+def prevent_overwrite(filename):
+    i = 1
+    f = filename.rsplit('.', 1)
+
+    while os.path.isfile(os.path.join(app.config['UPLOAD_FOLDER'], filename)):
+        filename = "%s_%d.%s" % (f[0], i, f[1])
+        i += 1
+
+    return filename
+
+@app.route('/upload', methods=['GET', 'POST'])
+def upload_file():
+    if request.method == 'POST':
+        # check if the post request has the file part
+        if 'file' not in request.files:
+            flash('No file part')
+            # return 'No file'
+            return redirect(request.url)
+        file = request.files['file']
+        # if user does not select file, browser also
+        # submit a empty part without filename
+        if file.filename == '':
+            flash('No selected file')
+            # return 'No file'
+            return redirect(request.url)
+
+        # print file.filename.rsplit('.', 1)[1].lower()
+        # print allowed_file(file.filename)
+        # print secure_filename(file.filename)
+        # print os.isfile(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+
+        if file and allowed_file(file.filename):
+            filename = secure_filename(file.filename)
+            filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+
+            filepath = prevent_overwrite(filepath)
+
+            file.save(filepath)
+            return 'UPLOADED'
+            # return redirect(url_for('uploaded_file',
+                                    # filename=filename))
+        else:
+            flash('Invalid Image Estension')
+
+    return render_template('upload.html.j2')
+
 # @app.route('/restaurants/<int:restaurant_id>/menu/JSON')
 # def restaurantMenuJSON(restaurant_id):
 #     restaurant = session.query(Restaurant).filter_by(id=restaurant_id).one()
 #     items = session.query(MenuItem).filter_by(
 #         restaurant_id=restaurant_id).all()
 #     return jsonify(MenuItems=[i.serialize for i in items])
-
 
 # ADD JSON API ENDPOINT HERE
 
@@ -347,10 +389,35 @@ def editItem(item_id):
     item = session.query(CategoryItem).join(CategoryItem.category) \
         .filter(CategoryItem.id==item_id).one()
 
+    # if request.method == 'POST':
+    #     print request.files.__dict__.keys()
+    #     return redirect(url_for('displayItemDetails', item_id= item.id))
+
     if request.method == 'POST':
         item.name = request.form['name']
         item.description = request.form['description']
         item.category_id = request.form['category']
+
+        imagefile = None
+
+        if 'image' in request.files:
+            file = request.files['image']
+
+            if file and (file.filename != '') and allowed_file(file.filename):
+                # if(item.image != '')
+                # os.path.isfile(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+                print item.image
+
+                #delete exsisting file
+                if item.image != None:
+                    os.remove(os.path.join(app.config['UPLOAD_FOLDER'], item.image))
+
+                imagefile = secure_filename(file.filename)
+                imagefile = prevent_overwrite(imagefile)
+                file.save(os.path.join(app.config['UPLOAD_FOLDER'], imagefile))
+
+        print  imagefile
+        item.image = imagefile
 
         session.add(item)
         session.commit()
@@ -358,6 +425,41 @@ def editItem(item_id):
         return redirect(url_for('displayItemDetails', item_id= item.id))
     else:
         return render_template('item_edit.html.j2', cats=cats, item=item)
+
+
+# check if the post request has the file part
+
+# return 'No file'
+# return redirect(request.url)
+
+# if user does not select file, browser also
+# submit a empty part without filename
+# if file.filename == '':
+# flash('No selected file')
+# return 'No file'
+# return redirect(request.url)
+
+# print file.filename.rsplit('.', 1)[1].lower()
+# print allowed_file(file.filename)
+# print secure_filename(file.filename)
+# print os.isfile(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+
+# if file and allowed_file(file.filename):
+# filename = secure_filename(file.filename)
+# filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+#
+# filepath = prevent_overwrite(filepath)
+#
+# file.save(filepath)
+# return 'UPLOADED'
+# # return redirect(url_for('uploaded_file',
+#                         # filename=filename))
+# else:
+# flash('Invalid Image Estension')
+#
+# return render_template('upload.html.j2')
+
+
 
 @app.route('/item/add', methods=['GET', 'POST'])
 def addItem():
@@ -386,8 +488,6 @@ def deleteItem(item_id):
     session.commit()
 
     return redirect(url_for('displayItems'))
-
-
 
 if __name__ == '__main__':
     app.secret_key = '1GrSamWXZ8ikGhg43UIUbw5X'
