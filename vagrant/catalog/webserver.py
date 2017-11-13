@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, make_response, session as login_session
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, make_response, send_from_directory, session as login_session
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from database_setup import Base, Category, CategoryItem
@@ -11,6 +11,7 @@ ALLOWED_EXTENSIONS = set(['jpg', 'jpe', 'jpeg', 'png', 'gif', 'svg', 'bmp'])
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app.config['MAX_CONTENT_LENGTH'] = 5 * 1024 * 1024
 
 # APPLICATION_NAME = "Restaurant Menu Application"
 
@@ -34,231 +35,24 @@ def prevent_overwrite(filename):
 
     return filename
 
-@app.route('/upload', methods=['GET', 'POST'])
-def upload_file():
-    if request.method == 'POST':
-        # check if the post request has the file part
-        if 'file' not in request.files:
-            flash('No file part')
-            # return 'No file'
-            return redirect(request.url)
-        file = request.files['file']
-        # if user does not select file, browser also
-        # submit a empty part without filename
-        if file.filename == '':
-            flash('No selected file')
-            # return 'No file'
-            return redirect(request.url)
+@app.route('/images/<filename>')
+def uploaded_file(filename):
+    return send_from_directory(app.config['UPLOAD_FOLDER'],
+                               filename)
 
-        # print file.filename.rsplit('.', 1)[1].lower()
-        # print allowed_file(file.filename)
-        # print secure_filename(file.filename)
-        # print os.isfile(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-
-        if file and allowed_file(file.filename):
-            filename = secure_filename(file.filename)
-            filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-
-            filepath = prevent_overwrite(filepath)
-
-            file.save(filepath)
-            return 'UPLOADED'
-            # return redirect(url_for('uploaded_file',
-                                    # filename=filename))
-        else:
-            flash('Invalid Image Estension')
-
-    return render_template('upload.html.j2')
-
-# @app.route('/restaurants/<int:restaurant_id>/menu/JSON')
-# def restaurantMenuJSON(restaurant_id):
-#     restaurant = session.query(Restaurant).filter_by(id=restaurant_id).one()
-#     items = session.query(MenuItem).filter_by(
-#         restaurant_id=restaurant_id).all()
-#     return jsonify(MenuItems=[i.serialize for i in items])
 
 # ADD JSON API ENDPOINT HERE
-
-# Create anti-forgery state token
-@app.route('/login')
-def showLogin():
-    state = ''.join(random.choice(string.ascii_uppercase + string.digits)
-                    for x in xrange(32))
-    login_session['state'] = state
-    return render_template('login.html.j2', STATE=login_session['state'], login_session=login_session)
-
-@app.route('/ghcallback')
-def ghCallback():
-    ret = '<script>'\
-        'var code = window.location.toString().replace(/.+code=/, \'\');' \
-        'window.opener.githubCallback(code);' \
-        'window.close();' \
-        '</script>'
-
-    return ret
-
-@app.route('/azcallback')
-def azCallback():
-    ret = '<script>'\
-        'code =  window.location.toString();' \
-        'console.log(code, parent);' \
-        'window.opener.azCallback(code);' \
-        '</script>'
-        # 'window.close();' \
-        #'var code = window.location.toString().replace(/.+code=/, \'\');' \
-    return ret
-
-@app.route('/ghconnect', methods=['POST'])
-def ghconnect():
-    if request.args.get('state') != login_session['state']:
-        response = make_response(json.dumps('Invalid state parameter.'), 401)
-        response.headers['Content-Type'] = 'application/json'
-        return response
-
-    h = httplib2.Http()
-    client_id = json.loads(open('gh_client_secrets.json', 'r').read())['client_id']
-    client_secret = json.loads(open('gh_client_secrets.json', 'r').read())['client_secret']
-
-    #  url = ('https://github.com/login/oauth/access_token?client_id=e6789cd05a49a53a00b6&client_secret=3d9f803979f5964e840d9c6cc6015b9f07eb4b8c&code=%s&state=%s'%(request.data, login_session['state']))
-    url = 'https://github.com/login/oauth/access_token'
-    headers = {'Accept':'application/json'}
-    body = urllib.urlencode({ 'client_id': client_id, 'client_secret': client_secret, 'code': request.data, 'state':login_session['state']})
-
-
-    resp, content = h.request(url, 'POST', body=body, headers=headers)
-
-    #check for error??
-    #200{"error":"bad_verification_code","error_description":"The code passed is incorrect or expired.","error_uri":"https://developer.github.com/v3/oauth/#bad-verification-code"}
-
-    login_session['access_token'] = json.loads(content)['access_token']
-
-    url = ('https://api.github.com/user?access_token=%s' % login_session['access_token'])
-
-    #check for error??
-    #401{"message":"Bad credentials","documentation_url":"https://developer.github.com/v3"}
-
-    resp, content = h.request(url, 'GET')
-    user_data = json.loads(content)
-
-    login_session['username'] = user_data['login']
-    login_session['picture'] = user_data['avatar_url']
-    login_session['email'] = user_data['email']
-
-    return login_session['access_token'] +'\n'+ str(resp.status) +'\n'+ content
-
-@app.route('/fbconnect', methods=['POST'])
-def fbconnect():
-    if request.args.get('state') != login_session['state']:
-        response = make_response(json.dumps('Invalid state parameter.'), 401)
-        response.headers['Content-Type'] = 'application/json'
-        return response
-    access_token = request.data
-    print "access token received %s " % access_token
-
-
-    app_id = json.loads(open('fb_client_secrets.json', 'r').read())[
-        'web']['app_id']
-    app_secret = json.loads(
-        open('fb_client_secrets.json', 'r').read())['web']['app_secret']
-    url = 'https://graph.facebook.com/oauth/access_token?grant_type=fb_exchange_token&client_id=%s&client_secret=%s&fb_exchange_token=%s' % (
-        app_id, app_secret, access_token)
-    h = httplib2.Http()
-    result = h.request(url, 'GET')[1]
-
-
-    # Use token to get user info from API
-    userinfo_url = "https://graph.facebook.com/v2.8/me"
-    '''
-        Due to the formatting for the result from the server token exchange we have to
-        split the token first on commas and select the first index which gives us the key : value
-        for the server access token then we split it on colons to pull out the actual token value
-        and replace the remaining quotes with nothing so that it can be used directly in the graph
-        api calls
-    '''
-    token = result.split(',')[0].split(':')[1].replace('"', '')
-
-    url = 'https://graph.facebook.com/v2.8/me?access_token=%s&fields=name,id,email' % token
-    h = httplib2.Http()
-    result = h.request(url, 'GET')[1]
-    # print "url sent for API access:%s"% url
-    # print "API JSON result: %s" % result
-    data = json.loads(result)
-    login_session['provider'] = 'facebook'
-    login_session['username'] = data["name"]
-    login_session['email'] = data["email"]
-    login_session['facebook_id'] = data["id"]
-
-    # The token must be stored in the login_session in order to properly logout
-    login_session['access_token'] = token
-
-    # Get user picture
-    url = 'https://graph.facebook.com/v2.8/me/picture?access_token=%s&redirect=0&height=200&width=200' % token
-    h = httplib2.Http()
-    result = h.request(url, 'GET')[1]
-    data = json.loads(result)
-
-    login_session['picture'] = data["data"]["url"]
-
-    # see if user exists
-    # user_id = getUserID(login_session['email'])
-    # if not user_id:
-    #     user_id = createUser(login_session)
-
-    output = ''
-    output += '<h1>Welcome, '
-    output += login_session['username']
-
-    output += '!</h1>'
-    output += '<img src="'
-    output += login_session['picture']
-    output += ' " style = "width: 300px; height: 300px;border-radius: 150px;-webkit-border-radius: 150px;-moz-border-radius: 150px;"> '
-
-    flash("Now logged in as %s" % login_session['username'])
-    return output
-
-@app.route('/fbdisconnect')
-def fbdisconnect():
-    facebook_id = login_session['facebook_id']
-    # The access token must me included to successfully logout
-    access_token = login_session['access_token']
-    url = 'https://graph.facebook.com/%s/permissions?access_token=%s' % (facebook_id,access_token)
-    h = httplib2.Http()
-    result = h.request(url, 'DELETE')[1]
-    return "you have been logged out"
-
-@app.route('/testing')
-def testing():
-    result = {"data":"testing","error":"DATA ERROR"}
-
-    response = make_response(json.dumps(result.get('error')), 500)
-    response.headers['Content-Type'] = 'application/json'
-    return response
-
-@app.route('/gconnect', methods=['POST'])
-def gconnect():
-    # Validate state token
-    if request.args.get('state') != login_session['state']:
-        response = make_response(json.dumps('Invalid state parameter.'), 401)
-        response.headers['Content-Type'] = 'application/json'
-        return response
-
-    # Obtain authorization code
-
+def googleConnect(token):
     CLIENT_ID = json.loads(
         open('./client_secrets/google.json', 'r').read())['web']['client_id']
 
-    code = request.data
-
     try:
-        # Upgrade the authorization code into a credentials object
+        # Upgrade the authorization token into a credentials object
         oauth_flow = flow_from_clientsecrets('./client_secrets/google.json', scope='')
         oauth_flow.redirect_uri = 'postmessage'
-        credentials = oauth_flow.step2_exchange(code)
+        credentials = oauth_flow.step2_exchange(token)
     except FlowExchangeError:
-        response = make_response(
-            json.dumps('Failed to upgrade the authorization code.'), 401)
-        response.headers['Content-Type'] = 'application/json'
-        return response
+        return {"response": 'Failed to upgrade the authorization code.', "status": 401}
 
     # Check that the access token is valid.
     access_token = credentials.access_token
@@ -267,38 +61,28 @@ def gconnect():
     h = httplib2.Http()
     result = json.loads(h.request(url, 'GET')[1])
     # If there was an error in the access token info, abort.
+    print result
+
     if result.get('error') is not None:
-        response = make_response(json.dumps(result.get('error')), 500)
-        response.headers['Content-Type'] = 'application/json'
-        return response
+        return {"response": result.get('error'), "status": 500}
 
     # Verify that the access token is used for the intended user.
     gplus_id = credentials.id_token['sub']
     if result['user_id'] != gplus_id:
-        response = make_response(
-            json.dumps("Token's user ID doesn't match given user ID."), 401)
-        response.headers['Content-Type'] = 'application/json'
-        return response
+        return {"response": "Token's user ID doesn't match given user ID.", "status": 500}
 
     # Verify that the access token is valid for this app.
     if result['issued_to'] != CLIENT_ID:
-        response = make_response(
-            json.dumps("Token's client ID does not match app's."), 401)
-        print "Token's client ID does not match app's."
-        response.headers['Content-Type'] = 'application/json'
-        return response
+        return {"response": "Token's client ID does not match app's.", "status": 401}
 
-    stored_access_token = login_session.get('access_token')
-    stored_gplus_id = login_session.get('gplus_id')
-    if stored_access_token is not None and gplus_id == stored_gplus_id:
-        response = make_response(json.dumps('Current user is already connected.'),
-                                 200)
-        response.headers['Content-Type'] = 'application/json'
-        return response
+    # stored_access_token = login_session.get('access_token')
+    # stored_gplus_id = login_session.get('gplus_id')
+    # if stored_access_token is not None and gplus_id == stored_gplus_id:
+    #     return {"response": "Current user is already connected.", "status": 200}
 
     # Store the access token in the session for later use.
     login_session['access_token'] = credentials.access_token
-    login_session['gplus_id'] = gplus_id
+    login_session['user_id'] = gplus_id
 
     # Get user info
     userinfo_url = "https://www.googleapis.com/oauth2/v1/userinfo"
@@ -310,17 +94,170 @@ def gconnect():
     login_session['username'] = data['name']
     login_session['picture'] = data['picture']
     login_session['email'] = data['email']
+    login_session['account'] = "Google"
 
-    output = ''
-    output += '<h1>Welcome, '
-    output += login_session['username']
-    output += '!</h1>'
-    output += '<img src="'
-    output += login_session['picture']
-    output += ' " style = "width: 300px; height: 300px;border-radius: 150px;-webkit-border-radius: 150px;-moz-border-radius: 150px;"> '
-    flash("you are now logged in as %s" % login_session['username'])
-    print "done!"
-    return output
+    return {"response": "Login Successful.", "status": 200}
+
+def googleDisconnect():
+    if login_session['access_token'] is None:
+        return {"response": "Current user not connected", "status": 401}
+    url = 'https://accounts.google.com/o/oauth2/revoke?token=%s' % login_session['access_token']
+
+    h = httplib2.Http()
+    resp, content = h.request(url, 'GET')
+
+    print resp
+    print content
+    if resp['status'] == '200':
+        return {"response": "Successfully disconnected.", "status": 200}
+
+    return {"response": "Failed to revoke token for given user.", "status": 400}
+
+def facebookConnect(token):
+    h = httplib2.Http()
+    app_id = json.loads(open('client_secrets/facebook.json', 'r').read())[
+        'web']['app_id']
+    app_secret = json.loads(
+        open('client_secrets/facebook.json', 'r').read())['web']['app_secret']
+
+    url = 'https://graph.facebook.com/oauth/access_token?grant_type=fb_exchange_token&client_id=%s&client_secret=%s&fb_exchange_token=%s' % (
+        app_id, app_secret, token)
+    resp, content = h.request(url, 'GET')
+
+    if("error" in content):
+        return {"response": json.loads(content)['error']['message'], "status": 401}
+
+    access_token = json.loads(content)['access_token']
+    login_session['account'] = access_token
+
+    # Use token to get user info from API
+    url = 'https://graph.facebook.com/v2.8/me?access_token=%s&fields=name,id,email' % access_token
+    resp, content = h.request(url, 'GET')
+
+    if("error" in content):
+        return {"response": json.loads(content)['error']['message'], "status": 401}
+
+    data = json.loads(content)
+
+    login_session['account'] = "Facebook"
+    login_session['user_id'] = data["id"]
+    login_session['username'] = data["name"]
+    login_session['email'] = data["email"]
+    login_session['access_token'] = token
+
+    # Get user picture
+    url = 'https://graph.facebook.com/v2.8/me/picture?access_token=%s&redirect=0&height=200&width=200' % access_token
+    h = httplib2.Http()
+    resp, content = h.request(url, 'GET')
+
+    if("error" in content):
+        return {"response": json.loads(content)['error']['message'], "status": 401}
+
+    data = json.loads(content)
+    login_session['picture'] = data["data"]["url"]
+
+    return {"response": "Login Successful.", "status": 200}
+
+def githubConnect(token):
+    h = httplib2.Http()
+    client_id = json.loads(open('client_secrets/github.json', 'r').read())['client_id']
+    client_secret = json.loads(open('client_secrets/github.json', 'r').read())['client_secret']
+
+    url = 'https://github.com/login/oauth/access_token'
+    headers = {'Accept':'application/json'}
+    body = urllib.urlencode({ 'client_id': client_id, 'client_secret': client_secret, 'code': token, 'state':login_session['state']})
+
+    resp, content = h.request(url, 'POST', body=body, headers=headers)
+
+    if("error" in content):
+        return {"response": "Incorrect web token.", "status": 401}
+
+    login_session['access_token'] = json.loads(content)['access_token']
+    url = ('https://api.github.com/user?access_token=%s' % login_session['access_token'])
+    resp, content = h.request(url, 'GET')
+
+    if(resp['status'] == 401):
+        return {"response": "Bad credentials.", "status": 401}
+
+    user_data = json.loads(content)
+    login_session['account'] = 'Github'
+    login_session['user_id'] = user_data['id']
+    login_session['username'] = user_data['login']
+    login_session['picture'] = user_data['avatar_url']
+    login_session['email'] = user_data['email']
+
+    return {"response": "Login Successful.", "status": 200}
+
+
+@app.route('/login')
+def showLogin():
+    # if 'username' in login_session:
+    #     return redirect(url_for('displayItems'))
+
+    login_session['state'] = ''.join(random.choice(string.ascii_uppercase + string.digits)
+                    for x in xrange(32))
+    return render_template('login.html.j2', STATE=login_session['state'], login_session=login_session)
+
+@app.route('/acctconnect', methods=['POST'])
+def acctConnect():
+    if request.args.get('state') != login_session['state']:
+        response = make_response(json.dumps('Invalid state parameter.'), 401)
+        response.headers['Content-Type'] = 'application/json'
+        return response
+
+    data = json.loads(request.data)
+    # resp = make_response(json.dumps('Invalid login info.'), 401)
+
+    if(data['account'] == "Google"):
+        ret = googleConnect(data['token'])
+
+    if(data['account'] == "Facebook"):
+        ret = facebookConnect(data['token'])
+
+    if(data['account'] == "Github"):
+        ret = githubConnect(data['token'])
+
+    print data['account']
+
+    response = make_response(json.dumps(ret['response']), ret['status'])
+    response.headers['Content-Type'] = 'application/json'
+    return response
+
+@app.route('/acctdisconnect')
+def acctDisconnect():
+    if(login_session['account'] == "Google"):
+        ret = googleDisconnect()
+        print ret
+
+    del login_session['account']
+    del login_session['access_token']
+    del login_session['user_id']
+    del login_session['username']
+    del login_session['email']
+    del login_session['picture']
+
+    return redirect(url_for('displayItems'))
+
+@app.route('/ghcallback')
+def ghCallback():
+    ret = '<script>'\
+        'var code = window.location.toString().replace(/.+code=/, \'\');' \
+        'window.opener.githubCallback(code);' \
+        'window.close();' \
+        '</script>'
+
+    return ret
+
+
+@app.route('/fbdisconnect')
+def fbdisconnect():
+    facebook_id = login_session['facebook_id']
+    # The access token must me included to successfully logout
+    access_token = login_session['access_token']
+    url = 'https://graph.facebook.com/%s/permissions?access_token=%s' % (facebook_id,access_token)
+    h = httplib2.Http()
+    result = h.request(url, 'DELETE')[1]
+    return "you have been logged out"
 
 @app.route('/gdisconnect')
 def gdisconnect():
@@ -353,15 +290,13 @@ def gdisconnect():
 
 @app.route('/')
 def displayItems():
-    test = pprint.pformat(login_session)
-
     cats = session.query(Category).all()
     items = session.query(CategoryItem).order_by(CategoryItem.id).all()
     title_text = "Latest Items"
 
     return render_template(
         'display_items.html.j2', cats=cats, items=items,
-        title_text=title_text, cat_name = "", login_session=login_session, test=test)
+        title_text=title_text, cat_name = "", login_session=login_session)
 
 @app.route('/catalog/<int:cat_id>/')
 def displaySingleCatItems(cat_id):
@@ -374,13 +309,13 @@ def displaySingleCatItems(cat_id):
 
     return render_template(
         'display_items.html.j2', cats=cats, items=items,
-        title_text=title_text, cat_name = curr_cat.name)
+        title_text=title_text, cat_name = curr_cat.name, login_session=login_session)
 
 @app.route('/item/<int:item_id>')
 def displayItemDetails(item_id):
     item = session.query(CategoryItem).join(CategoryItem.category) \
         .filter(CategoryItem.id==item_id).one()
-    return render_template('item_details.html.j2', item=item)
+    return render_template('item_details.html.j2', item=item, login_session=login_session)
 
 @app.route('/item/<int:item_id>/edit', \
     methods=['GET', 'POST'])
@@ -388,10 +323,6 @@ def editItem(item_id):
     cats = session.query(Category).all()
     item = session.query(CategoryItem).join(CategoryItem.category) \
         .filter(CategoryItem.id==item_id).one()
-
-    # if request.method == 'POST':
-    #     print request.files.__dict__.keys()
-    #     return redirect(url_for('displayItemDetails', item_id= item.id))
 
     if request.method == 'POST':
         item.name = request.form['name']
@@ -404,19 +335,14 @@ def editItem(item_id):
             file = request.files['image']
 
             if file and (file.filename != '') and allowed_file(file.filename):
-                # if(item.image != '')
-                # os.path.isfile(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-                print item.image
-
-                #delete exsisting file
-                if item.image != None:
-                    os.remove(os.path.join(app.config['UPLOAD_FOLDER'], item.image))
+                # delete exsisting file
+                if item.image is not None:
+                    os.remove(os.path.join(app.config['UPLOAD_FOLDER'],item.image))
 
                 imagefile = secure_filename(file.filename)
                 imagefile = prevent_overwrite(imagefile)
-                file.save(os.path.join(app.config['UPLOAD_FOLDER'], imagefile))
+                file.save(os.path.join(app.config['UPLOAD_FOLDER'],imagefile))
 
-        print  imagefile
         item.image = imagefile
 
         session.add(item)
@@ -424,42 +350,7 @@ def editItem(item_id):
 
         return redirect(url_for('displayItemDetails', item_id= item.id))
     else:
-        return render_template('item_edit.html.j2', cats=cats, item=item)
-
-
-# check if the post request has the file part
-
-# return 'No file'
-# return redirect(request.url)
-
-# if user does not select file, browser also
-# submit a empty part without filename
-# if file.filename == '':
-# flash('No selected file')
-# return 'No file'
-# return redirect(request.url)
-
-# print file.filename.rsplit('.', 1)[1].lower()
-# print allowed_file(file.filename)
-# print secure_filename(file.filename)
-# print os.isfile(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-
-# if file and allowed_file(file.filename):
-# filename = secure_filename(file.filename)
-# filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-#
-# filepath = prevent_overwrite(filepath)
-#
-# file.save(filepath)
-# return 'UPLOADED'
-# # return redirect(url_for('uploaded_file',
-#                         # filename=filename))
-# else:
-# flash('Invalid Image Estension')
-#
-# return render_template('upload.html.j2')
-
-
+        return render_template('item_edit.html.j2', cats=cats, item=item, login_session=login_session)
 
 @app.route('/item/add', methods=['GET', 'POST'])
 def addItem():

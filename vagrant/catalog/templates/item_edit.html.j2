@@ -42,6 +42,9 @@
 
       <div class="form-group">
         <label>Thumbnails:</label>
+        {% if item.image != None %}
+          <p><img class="img-thumbnail" src="/images/{{item.image}}" /></p>
+        {% endif %}
         <div class="input-group">
           <label class="input-group-btn">
             <span class="btn btn-default">

@@ -19,17 +19,23 @@ body{
   color: white;
   text-decoration: underline;
 }
-
+.header-bar .avatar{
+  width: auto;
+  height: 40px;
+  float: right;
+  margin-left: 10px;
+}
 
 .panel-body.display-items{
   padding: 0;
 }
 .cat-cols, .content-cols{
-  float: none;
+  /*float: none;
   display: table-cell;
-  padding: 0px 15px 15px 15px;
+  padding: 0px 15px 15px 15px;*/
   font-size: 14px;
   line-height: 20px;
+  padding-bottom: 20px;
 }
 .panel-item{
   padding: 0px 15px 15px 15px;
@@ -47,6 +53,10 @@ a.curr-cat{
 .small-link{
   font-size: 16px;
 }
+.item-display{
+  padding: 0px 5px 20px 5px;
+}
+
 
 form.edit-item{
   margin: 0;

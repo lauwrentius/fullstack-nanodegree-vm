@@ -15,9 +15,12 @@
           <h1><a href="{{url_for('displayItems')}}">Catalog App</a></h1>
         </div>
         <div class="col-xs-8 login-session-col text-right">
-          {% if username in login_session %}
-            Welcome, {{login_session.username}}<br />
-            <a class="text-muted" href="{{url_for('gdisconnect')}}">Logout</a>
+          {% if login_session.username %}
+            <img class="avatar" src="{{login_session.picture}}" />
+            <div>
+              Welcome, {{login_session.username}}<br />
+              <a class="text-muted" href="{{url_for('acctDisconnect')}}">Logout</a>
+            </div>
           {% else %}
             <a href="{{url_for('showLogin')}}">Login</a>
           {% endif %}
@@ -27,6 +30,7 @@
       </div>
     </div>
   </div>
+  <p>{{dict(login_session)|tojson}}</p>
 
   <div class="container panel panel-default">
     <div class="row">
