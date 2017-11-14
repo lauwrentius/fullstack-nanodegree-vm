@@ -35,13 +35,6 @@ def prevent_overwrite(filename):
 
     return filename
 
-@app.route('/images/<filename>')
-def uploaded_file(filename):
-    return send_from_directory(app.config['UPLOAD_FOLDER'],
-                               filename)
-
-
-# ADD JSON API ENDPOINT HERE
 def googleConnect(token):
     CLIENT_ID = json.loads(
         open('./client_secrets/google.json', 'r').read())['web']['client_id']
@@ -106,12 +99,10 @@ def googleDisconnect():
     h = httplib2.Http()
     resp, content = h.request(url, 'GET')
 
-    print resp
-    print content
-    if resp['status'] == '200':
-        return {"response": "Successfully disconnected.", "status": 200}
+    if resp['status'] != '200':
+        return {"response": "Failed to revoke token for given user.", "status": 400}
 
-    return {"response": "Failed to revoke token for given user.", "status": 400}
+    return {"response": "Successfully disconnected.", "status": 200}
 
 def facebookConnect(token):
     h = httplib2.Http()
@@ -158,6 +149,16 @@ def facebookConnect(token):
 
     return {"response": "Login Successful.", "status": 200}
 
+def facebookDisconnect():
+    url = 'https://graph.facebook.com/%s/permissions?access_token=%s' % (login_session['user_id'],login_session['access_token'])
+    h = httplib2.Http()
+    resp, content = h.request(url, 'DELETE')[1]
+
+    if resp['status'] != '200':
+        return {"response": "Failed to revoke token for given user.", "status": 400}
+
+    return {"response": "Successfully disconnected.", "status": 200}
+
 def githubConnect(token):
     h = httplib2.Http()
     client_id = json.loads(open('client_secrets/github.json', 'r').read())['client_id']
@@ -188,6 +189,10 @@ def githubConnect(token):
 
     return {"response": "Login Successful.", "status": 200}
 
+@app.route('/images/<filename>')
+def uploaded_file(filename):
+    return send_from_directory(app.config['UPLOAD_FOLDER'],
+                               filename)
 
 @app.route('/login')
 def showLogin():
@@ -225,10 +230,18 @@ def acctConnect():
 
 @app.route('/acctdisconnect')
 def acctDisconnect():
+
     if(login_session['account'] == "Google"):
         ret = googleDisconnect()
-        print ret
 
+    if(login_session['account'] == "Facebook"):
+        ret = googleDisconnect()
+
+    if(login_session['account'] == "Github"):
+        # Cannot revoke Github access token.
+        ret =  {"response": "Successfully disconnected.", "status": 200}
+
+    print ret
     del login_session['account']
     del login_session['access_token']
     del login_session['user_id']
@@ -247,46 +260,6 @@ def ghCallback():
         '</script>'
 
     return ret
-
-
-@app.route('/fbdisconnect')
-def fbdisconnect():
-    facebook_id = login_session['facebook_id']
-    # The access token must me included to successfully logout
-    access_token = login_session['access_token']
-    url = 'https://graph.facebook.com/%s/permissions?access_token=%s' % (facebook_id,access_token)
-    h = httplib2.Http()
-    result = h.request(url, 'DELETE')[1]
-    return "you have been logged out"
-
-@app.route('/gdisconnect')
-def gdisconnect():
-    access_token = login_session.get('access_token')
-    if access_token is None:
-        print 'Access Token is None'
-        response = make_response(json.dumps('Current user not connected.'), 401)
-        response.headers['Content-Type'] = 'application/json'
-        return response
-    print 'In gdisconnect access token is %s', access_token
-    print 'User name is: '
-    print login_session['username']
-    url = 'https://accounts.google.com/o/oauth2/revoke?token=%s' % login_session['access_token']
-    h = httplib2.Http()
-    result = h.request(url, 'GET')[0]
-    print 'result is '
-    print result
-    if result['status'] == '200':
-        del login_session['access_token']
-        del login_session['gplus_id']
-        del login_session['username']
-        del login_session['email']
-        del login_session['picture']
-        response = make_response(json.dumps('Successfully disconnected.'), 200)
-        response.headers['Content-Type'] = 'application/json'
-        return response
-    else:
-        response = make_response(json.dumps('Failed to revoke token for given user.', 400))
-        response.headers['Content-Type'] = 'application/json'
 
 @app.route('/')
 def displayItems():
@@ -311,10 +284,20 @@ def displaySingleCatItems(cat_id):
         'display_items.html.j2', cats=cats, items=items,
         title_text=title_text, cat_name = curr_cat.name, login_session=login_session)
 
-@app.route('/item/<int:item_id>')
-def displayItemDetails(item_id):
+@app.route('/item/<int:item_id>', defaults={'endpoint': None})
+@app.route('/item/<int:item_id>/<endpoint>')
+def displayItemDetails(item_id,endpoint):
     item = session.query(CategoryItem).join(CategoryItem.category) \
         .filter(CategoryItem.id==item_id).one()
+
+    if endpoint == 'json':
+        return json.dumps({'name':item.name,
+            'id': item.id,
+            'description': item.description,
+            'image': url_for('uploaded_file', filename= item.image, _external=True),
+            'category_id': item.category_id,
+            'category_name': item.category.name })
+
     return render_template('item_details.html.j2', item=item, login_session=login_session)
 
 @app.route('/item/<int:item_id>/edit', \
