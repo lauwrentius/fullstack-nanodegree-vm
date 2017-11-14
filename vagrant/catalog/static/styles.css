@@ -28,7 +28,12 @@ body{
 
 .panel-body.display-items{
   padding: 0;
+  display: -webkit-box;
+  display: -webkit-flex;
+  display: -ms-flexbox;
+  display:         flex;
 }
+
 .cat-cols, .content-cols{
   /*float: none;
   display: table-cell;

@@ -19,18 +19,20 @@
 
     <p>{{item.description}}</p>
   </div>
-  <div class="panel-footer text-right">
-    <a class="btn btn-success btn-sm"
-      href="{{url_for('editItem', item_id = item.id )}}">
-      <span class="glyphicon glyphicon-pencil"></span> Edit
-    </a>
-    <button data-toggle="modal" data-target="#deleteModal" class="btn btn-danger btn-sm delete-btn">
-      <span class="glyphicon glyphicon-trash"></span> Delete
-    </button>
-  </div>
+  {% if 'username' in login_session %}
+    <div class="panel-footer text-right">
+      <a class="btn btn-success btn-sm"
+        href="{{url_for('editItem', item_id = item.id )}}">
+        <span class="glyphicon glyphicon-pencil"></span> Edit
+      </a>
+      <button data-toggle="modal" data-target="#deleteModal" class="btn btn-danger btn-sm delete-btn">
+        <span class="glyphicon glyphicon-trash"></span> Delete
+      </button>
+    </div>
+  {% endif %}
 {% endblock %}
 
-{% block footer %}
+{% block js %}
 <!-- Delete Modal -->
 <div class="modal fade" id="deleteModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
  <div class="modal-dialog" role="document">
@@ -44,6 +46,8 @@
       </div>
       <div class="modal-footer">
       <form class="form-delete" method="post" action="{{url_for('deleteItem', item_id = item.id)}}">
+        <input name=_csrf_token type=hidden value="{{ login_session['_csrf_token'] }}">
+
         <button type="submit" class="btn btn-sm btn-danger">
           <span class="glyphicon glyphicon-trash"></span> Delete Item
         </button>

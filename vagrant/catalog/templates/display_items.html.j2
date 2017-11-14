@@ -8,7 +8,7 @@
 {% endblock %}
 
 {% block content %}
-  <div class="panel-body display-items">    
+  <div class="panel-body display-items">
     <div class="cat-cols col-xs-3">
       <h3 class="text-info">Categories</h3>
       {% for cat in cats %}
@@ -32,13 +32,11 @@
     </div>
   </div>
 
+  {% if 'username' in login_session %}
   <div class="panel-footer text-right">
     <a href="{{url_for('addItem' )}}" class="btn btn-success btn-sm" type="submit">
       <span class="glyphicon glyphicon-plus"></span> Add Item
     </a>
   </div>
-{% endblock %}
-
-{% block footer %}
-  {{test}}
+  {% endif %}
 {% endblock %}
